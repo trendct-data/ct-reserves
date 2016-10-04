@@ -1,0 +1,196 @@
+---
+title: "Reserves by state"
+author: "Andrew Ba Tran"
+date: "October 4, 2016"
+output: html_document
+---
+
+This is the exploratory visualizations behind the Trend CT story: [Connecticut’s rainy day reserve among the lowest in the nation](http://trendct.org/2016/10/04/connecticuts-rainy-day-still-below-pre-recession-levels/) 
+
+```{r setup, warning=F, message=F}
+library(ggplot2)
+library(dplyr)
+library(readxl)
+library(knitr)
+library(extrafont)
+library(ggalt)
+library(scales)
+library(tidyr)
+```
+
+## Bringing in and cleaning up the Pew data 
+
+```{r prep, warning=F, message=F}
+pew <- read_excel("data/ReservesBalancesData.xlsx", sheet=2, skip=5)
+states <- pew[,1]
+
+
+days <- pew[,1:18]
+colnames(days) <- c("state", "fy2000", "fy2001", "fy2002", "fy2003",
+                    "fy2004", "fy2005", "fy2006", "fy2007", "fy2008",
+                    "fy2009", "fy2010", "fy2011", "fy2012", "fy2013",
+                    "fy2014", "fy2015", "fy2016")
+
+colnames(states) <- "state"
+
+balance_rainy <- pew[,20:36]
+balance_rainy <- cbind(states, balance_rainy)
+colnames(balance_rainy) <- c("state", "fy2000", "fy2001", "fy2002", "fy2003",
+                    "fy2004", "fy2005", "fy2006", "fy2007", "fy2008",
+                    "fy2009", "fy2010", "fy2011", "fy2012", "fy2013",
+                    "fy2014", "fy2015", "fy2016")
+
+reserves_percent <- pew[,38:54]
+reserves_percent <- cbind(states, reserves_percent)
+colnames(reserves_percent) <- c("state", "fy2000", "fy2001", "fy2002", "fy2003",
+                             "fy2004", "fy2005", "fy2006", "fy2007", "fy2008",
+                             "fy2009", "fy2010", "fy2011", "fy2012", "fy2013",
+                             "fy2014", "fy2015", "fy2016")
+
+df1 <- select(days, state, fy2016)
+df2 <- select(balance_rainy, state, fy2016)
+df16 <- left_join(df1, df2, by="state")
+df3 <- select(reserves_percent, state, fy2016)
+df16 <- left_join(df16, df3, by="state")
+
+colnames(df16) <- c("state", "Reserve days", "Balance", "Reserves as percent of budget")
+df16 <- subset(df16, !is.na(Balance))
+state_median <- subset(df16, state=="50-state median")
+df16  <- subset(df16, state!="50-state median")
+
+kable(head(df16))
+```
+
+# Reserve days that Connecticut can run on over time
+
+```{r reserves_over_time, warning=F, message=F, fig.width=9, fig.height=6}
+
+days2 <- subset(days, state=="Connecticut" | state=="50-state median")
+days2 <- gather(days2, "area", "year", 2:18)
+days2$area <- gsub("fy", "", days2$area)
+days2$year <- as.numeric(days2$year)
+
+gg <- ggplot(days2, aes(y=year, x=area, group=state, color=state)) 
+gg <- gg + geom_line()
+gg <- gg + labs(x=NULL, y=NULL, 
+                title="Reserve days that the state can run on over time",
+                subtitle="",
+                caption="Pew Research")
+gg <- gg + theme_minimal(base_family="Lato Regular")
+gg <- gg + theme(panel.grid.major.y=element_blank())
+gg <- gg + theme(panel.grid.minor=element_blank())
+gg <- gg + geom_vline(xintercept = state_median$`Reserve days`[1])
+
+gg <- gg + theme(plot.title=element_text(family="Lato Black"))
+gg <- gg + theme(plot.subtitle=element_text(margin=margin(b=10)))
+gg <- gg + theme(plot.caption=element_text(size=8, margin=margin(t=10)))
+gg
+```
+
+
+# Reserve days that states can run on over time
+
+```{r reserves_over_time2, warning=F, message=F, fig.width=9, fig.height=18}
+
+days <- subset(days, !is.na(fy2001))
+days <- gather(days, "area", "year", 2:18)
+days$area <- gsub("fy", "", days$area)
+days$year <- as.numeric(days$year)
+days$area <- as.numeric(as.character(days$area))
+
+gg <- ggplot(days, aes(y=year, x=area, group=state)) 
+gg <- gg + geom_line()
+gg <- gg + facet_wrap(~state, scale="free", ncol=5)
+gg <- gg + scale_x_continuous(limits=c(2000,2016), breaks=c(2000,2016),
+        labels=c("2000", "2016"))
+gg <- gg + labs(x=NULL, y=NULL, 
+                title="Reserve days that the state can run on over time",
+                subtitle="",
+                caption="Pew Research")
+gg <- gg + theme_minimal(base_family="Lato Regular")
+gg <- gg + theme(panel.grid.major.y=element_blank())
+gg <- gg + theme(panel.grid.minor=element_blank())
+gg <- gg + theme(plot.title=element_text(family="Lato Black"))
+gg <- gg + theme(plot.subtitle=element_text(margin=margin(b=10)))
+gg <- gg + theme(plot.caption=element_text(size=8, margin=margin(t=10)))
+gg
+```
+
+```{r graph1, warning=F, message=F, fig.width=6, fig.height=9}
+gg <- ggplot(df16, aes(y=reorder(state, -`Reserve days`) , x=`Reserve days`))
+gg <- gg + geom_lollipop(point.colour="steelblue", point.size=3, horizontal=TRUE)
+gg <- gg + labs(x=NULL, y=NULL, 
+                title="Reserve days that the state can run on",
+                subtitle="2016 estimates",
+                caption="Pew Research")
+gg <- gg + theme_minimal(base_family="Lato Regular")
+gg <- gg + theme(panel.grid.major.y=element_blank())
+gg <- gg + theme(panel.grid.minor=element_blank())
+gg <- gg + geom_vline(xintercept = state_median$`Reserve days`[1])
+
+gg <- gg + theme(plot.title=element_text(family="Lato Black"))
+gg <- gg + theme(plot.subtitle=element_text(margin=margin(b=10)))
+gg <- gg + theme(plot.caption=element_text(size=8, margin=margin(t=10)))
+gg
+```
+
+```{r graph2, warning=F, message=F, fig.width=6, fig.height=9}
+gg <- ggplot(df16, aes(y=reorder(state, -Balance) , x=as.numeric(Balance)))
+gg <- gg + geom_lollipop(point.colour="steelblue", point.size=3, horizontal=TRUE)
+gg <- gg + labs(x=NULL, y=NULL, 
+                title="Balance and reserves by state",
+                subtitle="2016 estimates",
+                caption="Pew Research")
+gg <- gg + theme_minimal(base_family="Lato Regular")
+gg <- gg + theme(panel.grid.major.y=element_blank())
+gg <- gg + theme(panel.grid.minor=element_blank())
+gg <- gg + geom_vline(xintercept = state_median$`Balance`[1])
+
+gg <- gg + theme(plot.title=element_text(family="Lato Black"))
+gg <- gg + theme(plot.subtitle=element_text(margin=margin(b=10)))
+gg <- gg + theme(plot.caption=element_text(size=8, margin=margin(t=10)))
+gg
+```
+
+```{r graph3, warning=F, message=F, fig.width=6, fig.height=9}
+gg <- ggplot(df16, aes(y=reorder(state, -`Reserves as percent of budget`), x=`Reserves as percent of budget`))
+gg <- gg + geom_lollipop(point.colour="steelblue", point.size=3, horizontal=TRUE)
+gg <- gg + scale_x_continuous(label=percent)
+gg <- gg + labs(x=NULL, y=NULL, 
+                title="Reserves as percent of budget",
+                subtitle="2016 estimates",
+                caption="Pew Research")
+gg <- gg + theme_minimal(base_family="Lato Regular")
+gg <- gg + theme(panel.grid.major.y=element_blank())
+gg <- gg + theme(panel.grid.minor=element_blank())
+gg <- gg + geom_vline(xintercept = state_median$`Reserves as percent of budget`[1])
+
+gg <- gg + theme(plot.title=element_text(family="Lato Black"))
+gg <- gg + theme(plot.subtitle=element_text(margin=margin(b=10)))
+gg <- gg + theme(plot.caption=element_text(size=8, margin=margin(t=10)))
+gg
+```
+
+```{r extra, include=F}
+
+
+# state_trans <- c(AL='B', AK='A', AZ='D', AR='C', CA='E', CO='F', CT='G', 
+#                  DE='H', FL='I', GA='J', HI='K', ID='M', IL='N', 
+#                  IN='O', IA='L', KS='P', KY='Q', LA='R', ME='U', MD='T',
+#                  MA='S', MI='V', MN='W', MS='Y', MO='X', MT='Z', NE='c',
+#                  NV='g', NH='d', NJ='e', NM='f', NY='h', NC='a', ND='b', 
+#                  OH='i', OK='j', OR='k', PA='l', RI='m', SC='n', SD='o',
+#                  TN='p', TX='q', UT='r', VT='t', VA='s', WA='u', WV='w', 
+#                  WI='v', WY='x')
+# 
+# state_list <- data.frame(state.abb, state.name, state_trans)
+# colnames(state_list) <- c("abbrev", "state", "trans")
+# df16 <- left_join(df16, state_list)
+
+# gg <- gg + geom_text(aes(y=state, x=-0.25, label=trans),
+#                      family="StateFace-Regular", color="tomato",
+#                      size=5, hjust=0)
+
+
+
+```

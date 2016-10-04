@@ -1,0 +1,9 @@
+{
+    "path" : "~/Documents/Github/trendct-data/2016/10/ct-reserves/data",
+    "sortOrder" : [
+        {
+            "ascending" : true,
+            "columnIndex" : 2
+        }
+    ]
+}

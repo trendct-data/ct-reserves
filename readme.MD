@@ -7,7 +7,7 @@ This repository contains source data and analysis code for the Trend CT story:
 
 # Walkthroughs
 
-* Reserves by state - [[HTML](http://trendct-data.github.io/ct-reserves)] [[RMarkdown]()] 
+* Reserves by state - [[HTML](http://trendct-data.github.io/ct-reserves)] [[RMarkdown](https://github.com/trendct-data/ct-reserves/blob/master/index.Rmd)] 
 
 ### The Data
 
